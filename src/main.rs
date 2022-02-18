@@ -1,18 +1,17 @@
 use std::fs::File;
 use std::io;
-use std::io::{Read, Seek};
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::vec::Vec;
 
 use clap::Parser;
 use derive_enum_from_into::EnumFrom;
-use image::{GrayImage, ImageDecoder, ImageEncoder, Luma};
+use image::{ImageDecoder, ImageEncoder};
 use match_any::match_any;
 
+use crate::args::{Cli, Command};
 use crate::bytes::Bytes;
 use crate::bytes::U64_BYTES;
-use crate::args::{Cli, Command};
 
 mod bytes;
 mod args;
@@ -111,14 +110,14 @@ fn encode_data(mut data: Vec<u8>, out: impl Write) -> anyhow::Result<()> {
     // we could use prime factorization to get a rect that fits exactly, but that's a lot of work and
     // will result in very weird dimensions for prime numbers, so it is probably not worth the hassle,
     // so instead, we just use a square that's just big enough and fill the rest with zeroes
-    let image_dimension = ((data_size + U64_BYTES) as f32).sqrt().ceil() as u32;
-    data.resize((image_dimension * image_dimension) as usize, 0); // TODO: support random values?
+    let image_dimension = ((data_size + U64_BYTES) as f32).sqrt().ceil() as usize;
+    data.resize((image_dimension * image_dimension) as usize, 0);
     // write data size at the end of the image
     let pos = data.len() - U64_BYTES;
     data.write_u64(pos, data_size as u64);
 
     //Encode as png
-    let mut writer = io::BufWriter::new(out);
+    let writer = io::BufWriter::new(out);
     image::codecs::png::PngEncoder::new(writer).write_image(&data, image_dimension as u32, image_dimension as u32, image::ColorType::L8)?;
 
     Ok(())

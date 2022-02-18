@@ -1,5 +1,6 @@
 [package]
 name = "pngify"
+description = "A small tool to save any file as a grayscale image"
 version = "0.1.0"
 edition = "2021"
 authors = ["Christoph Otter"]
