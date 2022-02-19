@@ -7,7 +7,7 @@ use std::vec::Vec;
 
 use clap::Parser;
 use derive_enum_from_into::EnumFrom;
-use image::{ImageDecoder, ImageEncoder};
+use image::{ColorType, ImageDecoder, ImageEncoder};
 use match_any::match_any;
 
 use crate::args::{Cli, Command, FileFormat};
@@ -176,18 +176,8 @@ fn decode_data(reader: impl Read, out: impl Write, format: FileFormat) -> anyhow
     // format = image::guess_format()
     // decode image as given format
     let data = match format {
-        FileFormat::Png => {
-            let decoder = image::codecs::png::PngDecoder::new(reader)?;
-            let mut data = vec![0; decoder.total_bytes() as usize];
-            decoder.read_image(&mut data)?;
-            data
-        }
-        FileFormat::Pgm => {
-            let decoder = image::codecs::pnm::PnmDecoder::new(reader)?;
-            let mut data = vec![0; decoder.total_bytes() as usize];
-            decoder.read_image(&mut data)?;
-            data
-        }
+        FileFormat::Png => read_image(image::codecs::png::PngDecoder::new(reader)?)?,
+        FileFormat::Pgm => read_image(image::codecs::pnm::PnmDecoder::new(reader)?)?,
     };
 
     let original_len_index = data.len() - U64_BYTES;
@@ -205,4 +195,14 @@ fn decode_data(reader: impl Read, out: impl Write, format: FileFormat) -> anyhow
     out.flush()?;
 
     Ok(())
+}
+
+fn read_image<'a>(decoder: impl ImageDecoder<'a>) -> anyhow::Result<Vec<u8>> {
+    match decoder.color_type() {
+        ColorType::L8 => {}
+        color_type => eprintln!("WARNING: Unexpected color type: {:?}", color_type),
+    }
+    let mut data = vec![0; decoder.total_bytes() as usize];
+    decoder.read_image(&mut data)?;
+    Ok(data)
 }
