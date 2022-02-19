@@ -1,6 +1,6 @@
-use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 use image::ImageFormat;
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -27,7 +27,6 @@ pub enum Command {
         /// If none is provided and stdout is used, png is assumed.
         #[clap(short, long, arg_enum)]
         format: Option<FileFormat>,
-
         // size: Option<width or height of u64>
     },
     Decode {
@@ -62,7 +61,7 @@ impl TryFrom<ImageFormat> for FileFormat {
         match value {
             ImageFormat::Png => Ok(FileFormat::Png),
             ImageFormat::Pnm => Ok(FileFormat::Pgm),
-            _ => Err(())
+            _ => Err(()),
         }
     }
 }

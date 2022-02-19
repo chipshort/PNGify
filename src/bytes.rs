@@ -1,5 +1,3 @@
-
-
 pub const U64_BYTES: usize = (u64::BITS / u8::BITS) as usize;
 const U64_BYTES_U32: u32 = (u64::BITS / u8::BITS) as u32;
 
@@ -43,10 +41,14 @@ mod test {
 
     #[test]
     fn test_read_bytes() {
-        let vec = vec![0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8];
+        let vec = vec![
+            0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8, 0xFFu8,
+        ];
         assert_eq!(vec.read_u64(0), u64::MAX);
 
-        let vec = vec![0x07u8, 0x06u8, 0x05u8, 0x04u8, 0x03u8, 0x02u8, 0x01u8, 0x00u8];
+        let vec = vec![
+            0x07u8, 0x06u8, 0x05u8, 0x04u8, 0x03u8, 0x02u8, 0x01u8, 0x00u8,
+        ];
         assert_eq!(vec.read_u64(0), 0x0001020304050607u64);
     }
 
@@ -57,6 +59,9 @@ mod test {
         assert_eq!(&vec, &[0xFFu8; U64_BYTES]);
 
         vec.write_u64(0, 0x0001020304050607u64);
-        assert_eq!(&vec, &[0x07u8, 0x06u8, 0x05u8, 0x04u8, 0x03u8, 0x02u8, 0x01u8, 0x00u8]);
+        assert_eq!(
+            &vec,
+            &[0x07u8, 0x06u8, 0x05u8, 0x04u8, 0x03u8, 0x02u8, 0x01u8, 0x00u8]
+        );
     }
 }

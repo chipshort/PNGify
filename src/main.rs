@@ -13,8 +13,8 @@ use crate::args::{Cli, Command, FileFormat};
 use crate::bytes::Bytes;
 use crate::bytes::U64_BYTES;
 
-mod bytes;
 mod args;
+mod bytes;
 
 #[derive(EnumFrom)]
 enum InputReader {
@@ -32,10 +32,14 @@ fn main() {
     let args: Cli = Cli::parse();
 
     match args.command {
-        Command::Encode { input, output, format } => {
+        Command::Encode {
+            input,
+            output,
+            format,
+        } => {
             let data = match input {
                 None => read_stdin(),
-                Some(path) => read_file(path)
+                Some(path) => read_file(path),
             };
 
             let format = determine_format(&output, format);
@@ -43,7 +47,8 @@ fn main() {
             match (data, open_output(output)) {
                 (Ok(input), Ok(output)) => {
                     use OutputWriter::*;
-                    let result = match_any!(output, Stdout(o) | File(o) => encode_data(input, o, format));
+                    let result =
+                        match_any!(output, Stdout(o) | File(o) => encode_data(input, o, format));
                     if let Err(e) = result {
                         eprintln!("Error encoding the image: {}", e);
                     }
@@ -56,14 +61,17 @@ fn main() {
                 }
             }
         }
-        Command::Decode { input, output, format } => {
-
+        Command::Decode {
+            input,
+            output,
+            format,
+        } => {
             let format = determine_format(&input, format);
 
             match (open_input(input), open_output(output)) {
                 (Ok(input), Ok(output)) => {
-                    use OutputWriter as Out;
                     use InputReader as In;
+                    use OutputWriter as Out;
                     let result = match_any!(input, In::Stdin(i) | In::File(i) => {
                         match_any!(output, Out::Stdout(o) | Out::File(o) => decode_data(i, o, format))
                     });
@@ -87,7 +95,10 @@ fn determine_format(path: &Option<PathBuf>, provided_format: Option<FileFormat>)
     // try to guess from path
     let format = match path {
         None => None,
-        Some(path) => provided_format.or(image::ImageFormat::from_path(path).ok().map(|f| f.try_into().ok()).flatten())
+        Some(path) => provided_format.or(image::ImageFormat::from_path(path)
+            .ok()
+            .map(|f| f.try_into().ok())
+            .flatten()),
     };
     // use png as fallback
     format.unwrap_or(FileFormat::Png)
@@ -115,7 +126,7 @@ fn read_stdin() -> io::Result<Vec<u8>> {
 fn open_input(file: Option<PathBuf>) -> io::Result<InputReader> {
     match file {
         None => Ok(io::stdin().into()),
-        Some(path) => Ok(File::open(path)?.into())
+        Some(path) => Ok(File::open(path)?.into()),
     }
 }
 
@@ -140,8 +151,18 @@ fn encode_data(mut data: Vec<u8>, out: impl Write, format: FileFormat) -> anyhow
     // encode as given format
     let writer = io::BufWriter::new(out);
     match format {
-        FileFormat::Png => image::codecs::png::PngEncoder::new(writer).write_image(&data, image_dimension as u32, image_dimension as u32, image::ColorType::L8)?,
-        FileFormat::Pgm => image::codecs::pnm::PnmEncoder::new(writer).write_image(&data, image_dimension as u32, image_dimension as u32, image::ColorType::L8)?,
+        FileFormat::Png => image::codecs::png::PngEncoder::new(writer).write_image(
+            &data,
+            image_dimension as u32,
+            image_dimension as u32,
+            image::ColorType::L8,
+        )?,
+        FileFormat::Pgm => image::codecs::pnm::PnmEncoder::new(writer).write_image(
+            &data,
+            image_dimension as u32,
+            image_dimension as u32,
+            image::ColorType::L8,
+        )?,
     }
 
     Ok(())
