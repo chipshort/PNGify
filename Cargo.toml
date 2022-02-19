@@ -6,7 +6,7 @@ edition = "2021"
 authors = ["Christoph Otter"]
 
 [dependencies]
-image = "0.24.0"
+image = { version = "0.24.0", features = ["png", "pnm"], default-features = false }
 clap = { version = "3.0.14", features = ["derive"] }
 match_any = "1.0.1"
 derive-enum-from-into = "0.1.1"
