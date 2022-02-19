@@ -40,15 +40,17 @@ fn main() {
 
             match (data, open_output(output)) {
                 (Ok(input), Ok(output)) => {
-                    // TODO: error handling
                     use OutputWriter::*;
-                    match_any!(output, Stdout(o) | File(o) => encode_data(input, o)).unwrap();
+                    let result = match_any!(output, Stdout(o) | File(o) => encode_data(input, o));
+                    if let Err(e) = result {
+                        eprintln!("Error encoding the image: {}", e);
+                    }
                 }
                 (Err(e), _) => {
-                    eprintln!("Error reading input: {:?}", e);
+                    eprintln!("Error reading input: {}", e);
                 }
                 (_, Err(e)) => {
-                    eprintln!("Error writing output: {:?}", e);
+                    eprintln!("Error writing output: {}", e);
                 }
             }
         }
@@ -57,9 +59,12 @@ fn main() {
                 (Ok(input), Ok(output)) => {
                     use OutputWriter as Out;
                     use InputReader as In;
-                    match_any!(input, In::Stdin(i) | In::File(i) => {
+                    let result = match_any!(input, In::Stdin(i) | In::File(i) => {
                         match_any!(output, Out::Stdout(o) | Out::File(o) => decode_data(i, o))
-                    }).unwrap(); // TODO: error handling
+                    });
+                    if let Err(e) = result {
+                        eprintln!("Error decoding the image: {}", e);
+                    }
                 }
                 (Err(e), _) => {
                     eprintln!("Error reading input: {:?}", e);
