@@ -9,7 +9,7 @@ use derive_enum_from_into::EnumFrom;
 use image::{ImageDecoder, ImageEncoder};
 use match_any::match_any;
 
-use crate::args::{Cli, Command};
+use crate::args::{Cli, Command, FileFormat};
 use crate::bytes::Bytes;
 use crate::bytes::U64_BYTES;
 
@@ -32,16 +32,18 @@ fn main() {
     let args: Cli = Cli::parse();
 
     match args.command {
-        Command::Encode { input, output } => {
+        Command::Encode { input, output, format } => {
             let data = match input {
                 None => read_stdin(),
                 Some(path) => read_file(path)
             };
 
+            let format = determine_format(&output, format);
+
             match (data, open_output(output)) {
                 (Ok(input), Ok(output)) => {
                     use OutputWriter::*;
-                    let result = match_any!(output, Stdout(o) | File(o) => encode_data(input, o));
+                    let result = match_any!(output, Stdout(o) | File(o) => encode_data(input, o, format));
                     if let Err(e) = result {
                         eprintln!("Error encoding the image: {}", e);
                     }
@@ -54,13 +56,16 @@ fn main() {
                 }
             }
         }
-        Command::Decode { input, output } => {
+        Command::Decode { input, output, format } => {
+
+            let format = determine_format(&input, format);
+
             match (open_input(input), open_output(output)) {
                 (Ok(input), Ok(output)) => {
                     use OutputWriter as Out;
                     use InputReader as In;
                     let result = match_any!(input, In::Stdin(i) | In::File(i) => {
-                        match_any!(output, Out::Stdout(o) | Out::File(o) => decode_data(i, o))
+                        match_any!(output, Out::Stdout(o) | Out::File(o) => decode_data(i, o, format))
                     });
                     if let Err(e) = result {
                         eprintln!("Error decoding the image: {}", e);
@@ -75,6 +80,17 @@ fn main() {
             }
         }
     }
+}
+
+/// Determines the image format using the following order (falling priority): provided_format, path, assume FileFormat::Png
+fn determine_format(path: &Option<PathBuf>, provided_format: Option<FileFormat>) -> FileFormat {
+    // try to guess from path
+    let format = match path {
+        None => None,
+        Some(path) => provided_format.or(image::ImageFormat::from_path(path).ok().map(|f| f.try_into().ok()).flatten())
+    };
+    // use png as fallback
+    format.unwrap_or(FileFormat::Png)
 }
 
 /// Opens the file and reads it's contents into a Vec
@@ -110,7 +126,7 @@ fn open_output(file: Option<PathBuf>) -> io::Result<OutputWriter> {
     }
 }
 
-fn encode_data(mut data: Vec<u8>, out: impl Write) -> anyhow::Result<()> {
+fn encode_data(mut data: Vec<u8>, out: impl Write, format: FileFormat) -> anyhow::Result<()> {
     let data_size = data.len();
     // we could use prime factorization to get a rect that fits exactly, but that's a lot of work and
     // will result in very weird dimensions for prime numbers, so it is probably not worth the hassle,
@@ -121,20 +137,36 @@ fn encode_data(mut data: Vec<u8>, out: impl Write) -> anyhow::Result<()> {
     let pos = data.len() - U64_BYTES;
     data.write_u64(pos, data_size as u64);
 
-    //Encode as png
+    // encode as given format
     let writer = io::BufWriter::new(out);
-    image::codecs::png::PngEncoder::new(writer).write_image(&data, image_dimension as u32, image_dimension as u32, image::ColorType::L8)?;
+    match format {
+        FileFormat::Png => image::codecs::png::PngEncoder::new(writer).write_image(&data, image_dimension as u32, image_dimension as u32, image::ColorType::L8)?,
+        FileFormat::Pgm => image::codecs::pnm::PnmEncoder::new(writer).write_image(&data, image_dimension as u32, image_dimension as u32, image::ColorType::L8)?,
+    }
 
     Ok(())
 }
 
-fn decode_data(reader: impl Read, out: impl Write) -> anyhow::Result<()> {
-    // let image = imagefmt::read_from(&mut reader, imagefmt::ColFmt::Y)?;
+fn decode_data(reader: impl Read, out: impl Write, format: FileFormat) -> anyhow::Result<()> {
     let reader = io::BufReader::new(reader);
 
-    let decoder = image::codecs::png::PngDecoder::new(reader)?; // TODO: allow configuring format
-    let mut data = vec![0; decoder.total_bytes() as usize];
-    decoder.read_image(&mut data)?;
+    // TODO: autodetect format from file instead of defaulting to png if stdin is used
+    // format = image::guess_format()
+    // decode image as given format
+    let data = match format {
+        FileFormat::Png => {
+            let decoder = image::codecs::png::PngDecoder::new(reader)?;
+            let mut data = vec![0; decoder.total_bytes() as usize];
+            decoder.read_image(&mut data)?;
+            data
+        }
+        FileFormat::Pgm => {
+            let decoder = image::codecs::pnm::PnmDecoder::new(reader)?;
+            let mut data = vec![0; decoder.total_bytes() as usize];
+            decoder.read_image(&mut data)?;
+            data
+        }
+    };
 
     // get original length
     let original_len = data.read_u64(data.len() - U64_BYTES);
