@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use std::fs::File;
 use std::io;
 use std::io::{Read, Write};
@@ -189,8 +190,14 @@ fn decode_data(reader: impl Read, out: impl Write, format: FileFormat) -> anyhow
         }
     };
 
+    let original_len_index = data.len() - U64_BYTES;
     // get original length
-    let original_len = data.read_u64(data.len() - U64_BYTES);
+    let original_len = data.read_u64(original_len_index);
+
+    // check bounds
+    if original_len > original_len_index as u64 {
+        return Err(anyhow!("Invalid image file, original length is too big"));
+    }
 
     // write file to out
     let mut out = io::BufWriter::new(out);
