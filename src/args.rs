@@ -11,6 +11,7 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Command {
+    /// Allows you to encode data as an image
     Encode {
         /// The file to encode as an image.
         /// If none is provided, stdin is used.
@@ -27,8 +28,8 @@ pub enum Command {
         /// If none is provided and stdout is used, png is assumed.
         #[clap(short, long, arg_enum)]
         format: Option<FileFormat>,
-        // size: Option<width or height of u64>
     },
+    /// Allows you to decode a previously encoded image into the data it contains
     Decode {
         /// The image file to decode.
         /// If none is provided, stdin is used.
