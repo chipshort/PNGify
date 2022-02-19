@@ -96,10 +96,12 @@ fn determine_format(path: &Option<PathBuf>, provided_format: Option<FileFormat>)
     // try to guess from path
     let format = match path {
         None => None,
-        Some(path) => provided_format.or(image::ImageFormat::from_path(path)
-            .ok()
-            .map(|f| f.try_into().ok())
-            .flatten()),
+        Some(path) => provided_format.or_else(|| {
+            image::ImageFormat::from_path(path)
+                .ok()
+                .map(|f| f.try_into().ok())
+                .flatten()
+        }),
     };
     // use png as fallback
     format.unwrap_or(FileFormat::Png)
