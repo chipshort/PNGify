@@ -5,6 +5,11 @@ This can be used to upload arbitrary files on an image hoster (as long as they d
 
 The tool can either take files as input / output or stdin and stdout. It currently supports png and pnm output / input.
 
+## Example
+
+The contents of [this lorem ipsum](./example.txt) become the following image:
+![encoded image](./example.png)
+
 ## Usage
 
 ```bash
